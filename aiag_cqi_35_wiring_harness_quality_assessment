@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIAG CQI-35 Wiring Harness Quality Assessment</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (xlsx-js-style) for styled Excel Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        
+        .cqi-header-bg { background-color: #0F172A; }
+        
+        /* Table Styles for Compliance Level */
+        .vda-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1.5rem;
+            font-size: 0.8125rem;
+        }
+        .vda-table th {
+            background-color: #1E3A8A;
+            color: #FFFFFF;
+            border: 1px solid #1E3A8A;
+            padding: 8px 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .vda-table td {
+            border: 1px solid #CBD5E1;
+            padding: 8px 10px;
+            text-align: center;
+            background-color: #F8FAFC;
+        }
+        .vda-table tr:hover td {
+            background-color: #F1F5F9;
+        }
+        .vda-table .ne-val {
+            color: #B91C1C;
+            font-weight: 600;
+        }
+        .vda-table .compliance-box {
+            background-color: #1E3A8A;
+            color: #FFFFFF;
+            font-weight: 700;
+        }
+
+        /* Print Style Optimization - Force full width, remove scrollbars, fit landscape */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 6mm;
+            }
+
+            body { 
+                background: white !important; 
+                color: black !important; 
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .no-print { display: none !important; }
+            .tab-content { display: none !important; }
+            .tab-content.print-active { display: block !important; }
+            .card-section { break-inside: avoid; page-break-inside: avoid; margin-bottom: 15px !important; }
+            .card-section.print-hidden { display: none !important; }
+            .sidebar-container { display: none !important; }
+            .main-content { margin-left: 0 !important; width: 100% !important; padding: 0 !important; }
+
+            /* Remove scrollbars and allow tables to expand completely */
+            .overflow-x-auto {
+                overflow: visible !important;
+                overflow-x: visible !important;
+                width: 100% !important;
+            }
+
+            /* Optimized scaling for VDA compliance table */
+            .vda-table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                font-size: 7px !important;
+                margin-bottom: 8px !important;
+            }
+
+            .vda-table th, .vda-table td {
+                padding: 3px 1px !important;
+                border: 1px solid #94a3b8 !important;
+                word-wrap: break-word !important;
+                white-space: normal !important;
+            }
+
+            .vda-table th {
+                background-color: #1E3A8A !important;
+                color: #FFFFFF !important;
+            }
+
+            /* Optimized scaling for PDCA table */
+            #tab-deviations table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                font-size: 8px !important;
+            }
+
+            #tab-deviations th, #tab-deviations td {
+                padding: 4px 3px !important;
+                word-wrap: break-word !important;
+                white-space: normal !important;
+            }
+
+            textarea, input[type="text"], input[type="date"] { 
+                border: none !important; 
+                resize: none !important; 
+                background: transparent !important; 
+                height: auto !important;
+                white-space: pre-wrap !important;
+                overflow: visible !important;
+                font-size: 8px !important;
+                padding: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- LOGIN / LANDING PAGE MODAL -->
+    <div id="login-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden transform transition-all">
+            <!-- Header Banner -->
+            <div class="bg-emerald-600 px-6 py-8 text-white text-center relative">
+                <div class="w-16 h-16 bg-white text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md text-2xl font-black">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h2 class="text-xl font-bold tracking-tight">CQI 35 Wiring Harness Quality Guidelines-audit</h2>
+                <p class="text-xs text-emerald-100 mt-1">Veuillez vous connecter pour accéder à l'évaluation</p>
+            </div>
+
+            <!-- Login Form -->
+            <div class="p-6 space-y-4">
+                <div id="login-error-msg" class="hidden bg-red-50 text-red-700 border border-red-200 text-xs rounded-lg p-3 font-medium flex items-center space-x-2">
+                    <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+                    <span>Identifiant ou mot de passe incorrect.</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Identifiant (Login)</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <input type="text" id="login-username" placeholder="Saisir login" class="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mot de passe</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="login-password" placeholder="Saisir mot de passe" class="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" onkeydown="if(event.key==='Enter') handleLogin()">
+                    </div>
+                </div>
+
+                <button onclick="handleLogin()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-2 text-sm">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Se connecter</span>
+                </button>
+            </div>
+
+            <!-- Footer / Powered by -->
+            <div class="bg-slate-50 border-t border-slate-100 px-6 py-3 text-center">
+                <p class="text-xs font-semibold text-slate-500">powered by Azouzi Ahmed</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP HEADER BAR -->
+    <header class="cqi-header-bg text-white sticky top-0 z-50 shadow-md no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            <!-- Logo & Title -->
+            <div class="flex items-center space-x-3">
+                <span class="bg-emerald-600 text-white font-black px-3 py-1.5 rounded text-lg tracking-wider shadow">CQI-35</span>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">Wiring Harness Quality Assessment</h1>
+                    <p class="text-xs text-slate-400">AIAG 1st Edition 09/24 &mdash; Full 18 Sections &amp; Audit Data Entry</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="flex items-center space-x-2 bg-slate-800/80 p-1 rounded-lg border border-slate-700">
+                <button onclick="switchTab('audit')" id="tab-btn-audit" class="flex items-center space-x-2 px-4 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 text-white shadow transition">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <span>Audit (Data Entry)</span>
+                </button>
+                <button onclick="switchTab('compliance')" id="tab-btn-compliance" class="flex items-center space-x-2 px-4 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white transition">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Compliance Level (E<sub>n</sub>)</span>
+                </button>
+                <button onclick="switchTab('deviations')" id="tab-btn-deviations" class="flex items-center space-x-2 px-4 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white transition">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                    <span>Deviations &amp; PDCA</span>
+                    <span id="deviation-count-badge" class="bg-amber-500 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+            </div>
+
+            <!-- Header KPIs & Global Score -->
+            <div class="flex items-center space-x-6 border-l border-slate-700 pl-6">
+                <div class="text-right">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">Overall Score (E<sub>G</sub>)</span>
+                    <span id="header-global-score" class="text-xl font-extrabold text-emerald-400">100.0 %</span>
+                </div>
+                <div class="text-center">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">Assessment Status</span>
+                    <span id="header-status-badge" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold px-2.5 py-0.5 rounded">LEVEL A</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ACTION TOOLBAR -->
+    <div class="bg-white border-b border-slate-200 py-2.5 px-4 sticky top-[61px] z-40 shadow-sm no-print">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+            <!-- Left Info -->
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <span class="font-semibold text-slate-600">Auditeur:</span>
+                    <input type="text" id="auditor-name" value="Ahmed Azouzi" onchange="saveDataLocally()" class="border border-slate-300 rounded px-2.5 py-1 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none w-40 text-slate-800 font-medium transition">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="font-semibold text-slate-600">Date:</span>
+                    <input type="date" id="audit-date" value="2026-09-26" onchange="saveDataLocally()" class="border border-slate-300 rounded px-2.5 py-1 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-800 font-medium transition">
+                </div>
+                <div id="save-status-msg" class="text-[11px] text-emerald-600 font-semibold hidden flex items-center space-x-1">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Sauvegardé</span>
+                </div>
+            </div>
+
+            <!-- Right Action Buttons -->
+            <div class="flex items-center space-x-3">
+                <button onclick="saveToFileSystem()" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition font-medium shadow-sm" title="Enregistrer sous un fichier JSON sur votre disque">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Sauvegarder Fichier (JSON)</span>
+                </button>
+                <button onclick="openFromFileSystem()" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition font-medium shadow-sm" title="Charger un fichier d'évaluation JSON depuis votre disque">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <span>Ouvrir Fichier</span>
+                </button>
+                
+                <div class="h-4 w-[1px] bg-slate-300 mx-1"></div>
+
+                <button onclick="exportToExcel()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition font-medium shadow-sm">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>Exporter Excel (.xlsx)</span>
+                </button>
+
+                <!-- Zone Impression / PDF avec Sélection de Section -->
+                <div class="flex items-center space-x-1 bg-blue-50 border border-blue-200 p-1 rounded-lg">
+                    <select id="print-section-select" class="bg-white border border-slate-300 rounded px-2 py-1 text-slate-700 font-medium focus:outline-none text-xs">
+                        <option value="all">Toutes les sections</option>
+                    </select>
+                    <button onclick="printOrSavePDF()" class="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded-md flex items-center space-x-1.5 transition font-medium text-xs shadow-sm">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>Imprimer / PDF</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-1 flex gap-6 w-full">
+
+        <!-- SIDEBAR NAVIGATION -->
+        <aside id="audit-sidebar" class="w-64 flex-shrink-0 no-print">
+            <div class="bg-white border border-slate-200 rounded-xl p-4 sticky top-[120px] max-h-[calc(100vh-140px)] flex flex-col shadow-sm">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider"><i class="fa-solid fa-list-check mr-1.5"></i>AIAG Sections (18)</span>
+                </div>
+                <div id="sidebar-nav-list" class="space-y-1 overflow-y-auto flex-1 pr-1 text-xs">
+                </div>
+            </div>
+        </aside>
+
+        <!-- CONTENT AREA -->
+        <section class="flex-1 min-w-0 main-content">
+
+            <!-- TAB 1: AUDIT DATA ENTRY -->
+            <div id="tab-audit" class="tab-content space-y-8">
+                <!-- Banner Info -->
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between no-print shadow-sm">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-circle-info text-emerald-600 text-lg"></i>
+                        <span class="text-xs text-emerald-900 font-medium">Toutes les 18 sections et questions sont affichées ci-dessous. Faites défiler la page pour compléter l'évaluation.</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="setAllScoresGlobal(10)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-md text-xs font-semibold shadow-sm transition">Tout à 10</button>
+                        <button onclick="setAllScoresGlobal('N/A')" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded-md text-xs font-semibold shadow-sm transition">Tout à N/A</button>
+                    </div>
+                </div>
+
+                <!-- Dynamic Container for All 18 Sections -->
+                <div id="audit-all-sections-container" class="space-y-10">
+                </div>
+            </div>
+
+            <!-- TAB 2: COMPLIANCE LEVEL -->
+            <div id="tab-compliance" class="tab-content hidden space-y-6">
+                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-4 mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">CQI-35 Compliance Level Summary by Section</h2>
+                            <p class="text-xs text-slate-500">Vue synthétique détaillée par section avec statuts d'évaluation individuels</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-500 block">Overall Score (E<sub>G</sub>)</span>
+                            <span id="compliance-overall-eg" class="text-2xl font-black text-blue-900">100.0 %</span>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Tables Container -->
+                    <div id="compliance-tables-container" class="space-y-6">
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: DEVIATIONS & PDCA -->
+            <div id="tab-deviations" class="tab-content hidden space-y-6">
+                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-4 mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900 text-red-700"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Deviations &amp; PDCA Corrective Action Plan</h2>
+                            <p class="text-xs text-slate-500">Registre automatique des écarts (Score &lt; 10) et plan d'action de résolution</p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto print:overflow-visible">
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-900 text-white">
+                                    <th class="p-2.5 border border-slate-700 font-bold text-center w-[5%]">Ref</th>
+                                    <th class="p-2.5 border border-slate-700 w-[20%] font-bold">Requirement Description</th>
+                                    <th class="p-2.5 border border-slate-700 text-center font-bold w-[5%]">Score</th>
+                                    <th class="p-2.5 border border-slate-700 w-[20%] font-bold">Finding / Evidence</th>
+                                    <th class="p-2.5 border border-slate-700 w-[22%] font-bold bg-emerald-900 text-emerald-100">Root Cause (5-Why)</th>
+                                    <th class="p-2.5 border border-slate-700 w-[20%] font-bold bg-emerald-900 text-emerald-100">Corrective Action / Plan PDCA</th>
+                                    <th class="p-2.5 border border-slate-700 font-bold text-center bg-slate-800 w-[8%]">Owner / Target Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pdca-table-body" class="divide-y divide-slate-200">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-900 text-slate-400 py-4 px-6 text-center text-xs border-t border-slate-800 no-print mt-auto">
+        <p>AIAG CQI-35 Wiring Harness Assessment System &mdash; Electrocontact Tunisie / Motherson Group</p>
+    </footer>
+
+    <!-- SCRIPT APPLICATION DATA & LOGIC -->
+    <script>
+        const cqi35Data = [
+            {
+                code: "SECTION 1",
+                shortTitle: "1. GENERAL REQUIREMENTS",
+                title: "SECTION 1. GENERAL REQUIREMENTS & PFMEA",
+                questions: [
+                    { ref: "1.1", text: "PFMEA detection ranking for Severity 8-10 shall be <= 3 (or 4 under specific customer approval conditions).", guide: "Verify PFMEA rankings, customer approvals, and mitigation controls." },
+                    { ref: "1.2", text: "DFMEA / PFMEA alignment and Gap Analysis performed with sub-suppliers.", guide: "Verify cascading requirements and sub-supplier gap matrix." },
+                    { ref: "1.3", text: "Integration of detection levels aligned with failure modes.", guide: "Ensure Poka-Yoke and error proofing match severity levels." },
+                    { ref: "1.4", text: "Dedicated PFMEA resource per manufacturing site.", guide: "Check organizational chart and qualified PFMEA owner." },
+                    { ref: "1.5", text: "Compliance with SAE/USCAR, CQI standards, and customer specific requirements.", guide: "Review standard specifications register and lab certifications." },
+                    { ref: "1.6", text: "Incoming inspection control plan for sub-supplier components.", guide: "Check sampling plan, inspection records, and CMM measurement." },
+                    { ref: "1.7", text: "Inability for operators to modify or bypass Poka-Yoke / error-proofing devices.", guide: "Test physical keys, passwords, and lockout switches." },
+                    { ref: "1.8", text: "Process parameter changes validated and approved by Quality and Engineering.", guide: "Verify Engineering Change Request (ECR/ECN) workflow." },
+                    { ref: "1.9", text: "First Article Inspection (FAI) performed after every planned or unplanned machine shutdown.", guide: "Inspect FAI logbooks, setup sign-offs, and first-piece samples." },
+                    { ref: "1.10.1", text: "Preventive and predictive maintenance schedules and frequencies established.", guide: "Review TPM calendar and work orders execution rate." },
+                    { ref: "1.10.2", text: "Unplanned downtime records and continuous improvement plans maintained.", guide: "Verify MTBF/MTTR tracking and root cause analysis." },
+                    { ref: "1.10.3", text: "Critical spare parts safety stock available on-site at manufacturing facility.", guide: "Check spare parts inventory list and min-max levels." },
+                    { ref: "1.10.4", text: "Vacuum cleaning systems utilized (compressed air blowers strictly prohibited).", guide: "Inspect cutting and crimping areas for vacuum equipment." },
+                    { ref: "1.11", text: "Dedicated and qualified technical process experts assigned to operations.", guide: "Review qualification matrix and training logs." },
+                    { ref: "1.12.1", text: "Operator certification evidence documented for assigned workstations.", guide: "Verify skill matrix, versatility board, and operator badges." },
+                    { ref: "1.12.2", text: "Mandatory off-line practical training program for new operators.", guide: "Inspect Dojo / training school records and practical tests." },
+                    { ref: "1.12.3", text: "Practical hands-on exercises at actual workstation included in training curriculum.", guide: "Check workstation tutoring logs." },
+                    { ref: "1.12.4", text: "Operator awareness and tracking of Quality / Production KPIs.", guide: "Review shopfloor visual management boards." },
+                    { ref: "1.12.5", text: "Non-conforming safety components marked and scrapped.", guide: "Verify red box scrap procedures and physical destruction." },
+                    { ref: "1.13", text: "Food and drinks prohibited in production area (drinking water allowed in closed containers in designated areas).", guide: "Audit production floor 5S compliance." },
+                    { ref: "1.14", text: "Usage of gloves or finger cots required in ultrasonic welding process and documented in work instruction.", guide: "Check Operator Work Instructions (OWI) and PPE compliance." },
+                    { ref: "1.15", text: "Illumination at workstations, testing, and inspection stations at minimum 1,000 lux at task surface.", guide: "Verify Lux-meter measurement logs at inspection stations." },
+                    { ref: "1.16", text: "Wires and subassemblies manufactured before corrosion appears; terminal corrosion studies available.", guide: "Review storage exposure limits and oxidation studies." },
+                    { ref: "1.17", text: "Red rabbits available at manufacturing facility meeting latest engineering level.", guide: "Verify masters/red rabbits identification, expiry, and calibration." },
+                    { ref: "1.18", text: "Workstations, assembly boards, and testers compliant with supplier ergonomic requirements.", guide: "Check ergonomic assessments (EAD/Ergo evaluation)." },
+                    { ref: "1.19", text: "Process data stored electronically for the duration of the program life cycle.", guide: "Audit server backups and traceability data retention." }
+                ]
+            },
+            {
+                code: "SECTION 2",
+                shortTitle: "2. MATERIAL HANDLING",
+                title: "SECTION 2. HANDLING, STORAGE & SUB-ASSEMBLY TRANSPORTATION",
+                questions: [
+                    { ref: "2.1", text: "Components stored in original closed packaging until point of use.", guide: "Audit warehouse and supermarket packaging integrity." },
+                    { ref: "2.2.1", text: "Terminal reels kept in original closed packaging.", guide: "Check reel covers and desiccant bags where applicable." },
+                    { ref: "2.2.2", text: "Maximum stacking height for terminal reels defined by study.", guide: "Verify visual stacking indicators on racks." },
+                    { ref: "2.2.3", text: "Terminals oriented vertically upwards at all times during storage and handling.", guide: "Inspect reel carrier carts and storage orientation." },
+                    { ref: "2.3", text: "Repackaging or rewinding of terminal reels strictly prohibited.", guide: "Verify no manual reel rewinding stations exist." },
+                    { ref: "2.4", text: "Terminal reels protected against dust, contamination, and mechanical damage.", guide: "Inspect reel storage covers." },
+                    { ref: "2.5", text: "Standardized drum cones equipped with replaceable Delrin sleeve.", guide: "Check wire payoff systems equipment." },
+                    { ref: "2.6", text: "Wire circuit bundle size controlled (max 100 pcs for <6mm², max 50 pcs for >=6mm²).", guide: "Verify bundle counts on cutting machines output." },
+                    { ref: "2.7.1", text: "Clean rigid protective cap installed on crimped terminals.", guide: "Check cap application on sensitive terminal leads." },
+                    { ref: "2.7.2", text: "Number of bundles on racks controlled with min/max indicators; rubber bands positioned clear of terminals.", guide: "Audit bundle hanging carts." },
+                    { ref: "2.7.3", text: "Spliced circuits and sub-assemblies wrapped individually to prevent tangling and protect terminals.", guide: "Check intermediate protection sleeves." },
+                    { ref: "2.8", text: "Wire circuit and subassembly transportation to a different manufacturing facility is not allowed.", guide: "Verify direct single-site flow or validated inter-site control." },
+                    { ref: "2.9", text: "Component containers identified with part number, located in assigned place, clean, and damage-free.", guide: "Audit KANBAN container labelling and cleanliness." },
+                    { ref: "2.10", text: "Internal procedure related to scrap management established and implemented.", guide: "Review scrap authorization flow and physical quarantine cages." },
+                    { ref: "2.11", text: "Storage min-max height defined for each component part number.", guide: "Verify rack height limits." },
+                    { ref: "2.12", text: "Original connector packaging retained until point of use.", guide: "Audit assembly line side component boxes." },
+                    { ref: "2.13", text: "Bend radius assessment for specialty cables (coaxial, LVDS, Ethernet, etc.) complies with supplier recommendations.", guide: "Check cart bending guides for special cables." },
+                    { ref: "2.14", text: "High-risk areas identified on carts/boards; harnesses handled/hung from main branches, not connectors/terminals/clips.", guide: "Observe operators handling harness subassemblies." },
+                    { ref: "2.15.1", text: "Dropped components (wires, terminals, connectors, seals, etc.) scrapped immediately; flooring designed to prevent contact.", guide: "Inspect drop boxes and floor clean up discipline." },
+                    { ref: "2.15.2", text: "Storage tooling and racks kept clean and subjected to preventive maintenance.", guide: "Check cart maintenance stickers." },
+                    { ref: "2.16.1", text: "Harness transportation via handling equipment (conveyors/carts) avoiding manual carrying.", guide: "Observe material handling methods." },
+                    { ref: "2.16.2", text: "Protection against snagging and sharp edges on transportation equipment.", guide: "Inspect cart corners, rubber padding, and protective foam." },
+                    { ref: "2.16.3", text: "Maximum quantity of harnesses per cart/rack defined and strictly controlled.", guide: "Verify cart capacity labels." },
+                    { ref: "2.16.4", text: "Weight support fixtures provided for harnesses weighing over 9 kg (20 lbs).", guide: "Check ergonomic hoists/balancers." }
+                ]
+            },
+            {
+                code: "SECTION 3",
+                shortTitle: "3. SUPPLIER QUALITY",
+                title: "SECTION 3. SUPPLIER QUALITY & MOLDING CONTROLS",
+                questions: [
+                    { ref: "3.1.1", text: "Sub-tier PFMEA and Control Plan available for Tier 1 approval.", guide: "Review sub-supplier PPAP files." },
+                    { ref: "3.1.2", text: "Annual press tooling analysis using PAL analyzer.", guide: "Check press tooling wear reports." },
+                    { ref: "3.1.3", text: "100% vision system inspection (clearances, crimp barrel widths, blade clearance, parallelism).", guide: "Audit automated vision inspection stations." },
+                    { ref: "3.1.4", text: "Automatic mutilation function triggered upon vision inspection defect detection.", guide: "Test vision scrap guillotine/mutilator." },
+                    { ref: "3.1.5", text: "Error-proofing system for raw material pallet orientation and loading.", guide: "Check material loading Poka-Yoke." },
+                    { ref: "3.1.6", text: "Regular verification (shift change, setup, downtime) of part numbers, labels, dimensions, and plating.", guide: "Verify Quality setup sheets." },
+                    { ref: "3.1.7", text: "Mandatory dimensional setup approval and production release.", guide: "Check FAI lab reports." },
+                    { ref: "3.1.8", text: "Plating material certificates available.", guide: "Audit supplier Certificate of Analysis (CoA)." },
+                    { ref: "3.1.9", text: "Electronic archiving of compliance reports including inspection images.", guide: "Verify server photo backup archive." },
+                    { ref: "3.1.10", text: "Acceptance test system ensuring all terminals meet measurement requirements prior to shipment.", guide: "Review supplier outgoing test logs." },
+                    { ref: "3.1.11", text: "Process capability data (Cpk/Ppk) demonstrating the process is in statistical control.", guide: "Verify Cpk reports (> 1.67)." },
+                    { ref: "3.2.1", text: "Injection pressure monitored with automatic stop and scrap on unexpected variation; compliant with CQI-23 Molding Assessment.", guide: "Review CQI-23 annual audit." },
+                    { ref: "3.2.2", text: "Connector verification using gage simulating mating component during setup and end of run.", guide: "Inspect mating pin gages." },
+                    { ref: "3.2.3", text: "Detection control to capture injection short shots from each molding cavity.", guide: "Test short-shot sensor/scale." },
+                    { ref: "3.2.4", text: "Vision system in place to ensure seals and locks are assembled in correct quantity, position, and orientation.", guide: "Inspect automated seal assembly vision camera." },
+                    { ref: "3.2.5", text: "Connectors protected before packaging to ensure locks are not unintentionally closed.", guide: "Check connector packaging tray design." }
+                ]
+            },
+            {
+                code: "SECTION 4",
+                shortTitle: "4. WIRE PREPARATION",
+                title: "SECTION 4. WIRE PREPARATION, CUTTING & CRIMPING",
+                questions: [
+                    { ref: "4.1", text: "Mandatory scanning of cable, terminal, seal, ferrule, and applicator with USCAR-21 validation check & applicator cycle monitoring.", guide: "Audit barcode scanning sequence on Komax/Schleuniger." },
+                    { ref: "4.2.1", text: "Wire cutting and stripping blades monitored driven by capability data and replaced before end of life.", guide: "Check blade counter and replacement logs." },
+                    { ref: "4.2.2", text: "Automatic system to detect blade contact with conductor during wire stripping.", guide: "Test conductor contact sensor (e.g., Komax ACD)." },
+                    { ref: "4.3.1", text: "Crimping machines equipped with CFM or CFA (Crimp Force Monitor/Analyzer).", guide: "Verify CFM installation on 100% of presses." },
+                    { ref: "4.3.2", text: "100% detection of crimping anomalies (damaged/missing strands, strand out of position, insulation under crimp, damaged seal/insulation).", guide: "Verify CFM master sample calibration limits." },
+                    { ref: "4.4", text: "Cut leads originating from automatic wire cutting machines meeting all quality requirements.", guide: "Inspect wire lead ends for fraying or insulation damage." },
+                    { ref: "4.5", text: "Retention of semi-stripped insulation slugs & automatic window cut on machine.", guide: "Check slug vacuum extraction." },
+                    { ref: "4.6", text: "Rework or repair of crimped terminals strictly prohibited.", guide: "Verify scrap policy for bad crimps." },
+                    { ref: "4.7", text: "Automatic scrap mutilation mechanism active upon crimp/cut defect detection.", guide: "Test automatic wire chopper/mutilator on CFM defect." },
+                    { ref: "4.8.1", text: "First-off inspection after planned/unplanned downtime (crimp dimensions, pull test, strip length) electronically saved.", guide: "Review Crimp Data Bank / Lab database." },
+                    { ref: "4.8.2", text: "Approved USCAR-21 validation test reports available at machine/station.", guide: "Check USCAR-21 crimp validation file." },
+                    { ref: "4.8.3", text: "Laboratory cross-section analysis based on process capability (microsection, compaction rate, bellmouth, cutoff tab).", guide: "Review microsection lab reports and compaction %." },
+                    { ref: "4.9", text: "Manual crimping hand tools strictly prohibited for production.", guide: "Audit cutting floor for unauthorized hand crimpers." },
+                    { ref: "4.10", text: "Machine operators not authorized to adjust or alter machine parameters.", guide: "Verify password locks on cutting machine controllers." },
+                    { ref: "4.11", text: "Parameters defined by Engineering and approved/validated by Quality.", guide: "Check central server parameter distribution." },
+                    { ref: "4.12", text: "OEM applicator tooling and spare parts used or USCAR-validated equivalents.", guide: "Inspect applicator punch & anvil spare parts inventory." }
+                ]
+            },
+            {
+                code: "SECTION 5",
+                shortTitle: "5. WIRE TWISTING",
+                title: "SECTION 5. WIRE TWISTING PROCESS",
+                questions: [
+                    { ref: "5.1", text: "Wire twisting process 100% automated.", guide: "Inspect twisting machine automation." },
+                    { ref: "5.2", text: "No operator manual intervention permitted during twisting cycle.", guide: "Verify automated load/unload sequence." },
+                    { ref: "5.3", text: "No damage allowed on terminals, wire insulation, or seals during twisting.", guide: "Inspect twisted pairs under optical magnification." },
+                    { ref: "5.4", text: "Twist pitch, un-twisted end lengths, and total length verified at defined frequency (e.g. 3x/shift).", guide: "Check quality control logsheets for pitch length." },
+                    { ref: "5.5", text: "Complete absence of kinks, loops, or irregular twist geometry.", guide: "Audit visual inspection samples." },
+                    { ref: "5.6", text: "Spot taping applied at start and end of twisted section as specified.", guide: "Check spot tape positioning and tape spec." },
+                    { ref: "5.7", text: "100% Hipot testing on twisted pairs with drain/shield wire.", guide: "Verify inline Hipot tester." }
+                ]
+            },
+            {
+                code: "SECTION 6",
+                shortTitle: "6. ULTRASONIC WELDING",
+                title: "SECTION 6. ULTRASONIC WELDING PROCESS",
+                questions: [
+                    { ref: "6.1", text: "Mandatory barcode scanning of raw materials, tools, and recipe parameters before starting ultrasonic welding.", guide: "Audit welder barcoding interface." },
+                    { ref: "6.2.1", text: "Ultrasonic welding equipment capable of mutilating non-conforming parts.", guide: "Test welder automatic wire cutter/mutilator." },
+                    { ref: "6.2.2", text: "Machine stop on H1 height out of spec before welding; Quality release required.", guide: "Test pre-weld height lock." },
+                    { ref: "6.2.3", text: "Automatic mutilation and scrap of wires on H2 height out of spec after welding.", guide: "Test post-weld height scrap trigger." },
+                    { ref: "6.2.4", text: "Automatic control ensuring proper wire overlap distance prior to welding.", guide: "Check wire stop fixture." },
+                    { ref: "6.3", text: "Visual aids displayed showing wire count/location, total area, H1/H2 height, energy, pressure, amplitude.", guide: "Inspect welder visual work instructions." },
+                    { ref: "6.4", text: "Pull force and peel force retention tested and verified after planned/unplanned downtime.", guide: "Review pull test machine records for splices." },
+                    { ref: "6.5", text: "Welding parameters verified per capability data and compared against USCAR validation specs/microsection criteria.", guide: "Check USCAR-38 validation reports." },
+                    { ref: "6.6", text: "Strands clean/free of fluids; anti-side splice fixture installed for precise wire alignment.", guide: "Inspect welding tool nest and side plates." },
+                    { ref: "6.7.1", text: "Wire positioning error-proofing devices (anti-side splice kit) installed.", guide: "Verify mechanical side guides." },
+                    { ref: "6.7.2", text: "Detection mechanism for smallest wire section presence (positioned in center of nugget).", guide: "Verify wire sequence sensor." },
+                    { ref: "6.8", text: "OEM sonotrode/anvil tooling used; deviation requires risk plan and USCAR-38/45 compliance customer approval.", guide: "Audit tooling spare parts certification." },
+                    { ref: "6.9", text: "Repairs or reworks are strictly prohibited on ultrasonic welded splices.", guide: "Verify immediate scrap policy for defective splices." },
+                    { ref: "6.10", text: "Process sheets available at equipment for each splice configuration describing quality criteria and machine parameters.", guide: "Check machine process parameter sheets." }
+                ]
+            },
+            {
+                code: "SECTION 7",
+                shortTitle: "7. SOLDERING",
+                title: "SECTION 7. SOLDERING PROCESS",
+                questions: [
+                    { ref: "7.1", text: "Terminals free of residues and contamination prior to soldering.", guide: "Inspect cleaning process prior to soldering." },
+                    { ref: "7.2", text: "Cable insulation shall remain free of solder.", guide: "Check wire wicking and insulation clearance." },
+                    { ref: "7.3", text: "Solder application characteristics automatically controlled and monitored (amount/volume, position, area).", guide: "Verify automatic solder feeder." },
+                    { ref: "7.4", text: "Dip soldering process strictly controlled (temperature, time, volume, automated inspection).", guide: "Check solder pot pyrometer logs." }
+                ]
+            },
+            {
+                code: "SECTION 8",
+                shortTitle: "8. HEAT SHRINKING",
+                title: "SECTION 8. HEAT SHRINKING PROCESS",
+                questions: [
+                    { ref: "8.1", text: "100% error-proofing / Poka-Yoke fixture for heat-shrink sleeve positioning over terminals.", guide: "Check optical/laser positioning sensors." },
+                    { ref: "8.2.1", text: "Raw material scanning and 100% vision check ensuring no adhesive residue on terminal mating zone.", guide: "Inspect vision check camera." },
+                    { ref: "8.2.2", text: "Adhesive scraping strictly prohibited; non-conforming parts automatically scrapped.", guide: "Verify no scraping tools exist." },
+                    { ref: "8.2.3", text: "100% monitoring of heating/cooling cycle time and temperature parameters.", guide: "Check heat oven controller logs." },
+                    { ref: "8.3", text: "Automated control ensuring minimum 13 mm sleeve overlap on each side of splice.", guide: "Verify sleeve length fixtures." },
+                    { ref: "8.4.1", text: "Single splice processing per heating cycle in oven for sealed splices.", guide: "Check oven loading process discipline." },
+                    { ref: "8.4.2", text: "Continuous oven thermal profile monitoring using redundant temperature sensors.", guide: "Audit thermocouple calibration records." },
+                    { ref: "8.5", text: "Water immersion leak test performed with SPC data recording.", guide: "Review bubble/leak test logs." },
+                    { ref: "8.6", text: "Leakage current / dielectric strength testing on sealed splices per capability data.", guide: "Review lab dielectric test reports." }
+                ]
+            },
+            {
+                code: "SECTION 9",
+                shortTitle: "9. TORQUE CONTROL",
+                title: "SECTION 9. FASTENING & TORQUE CONTROL",
+                questions: [
+                    { ref: "9.1", text: "100% monitoring, control, and storage of torque, angle, fastener count, speed, and sequence.", guide: "Verify smart screwdriver controller logs." },
+                    { ref: "9.2", text: "Torque tool guided and maintained strictly perpendicular to fastener.", guide: "Inspect torque reaction arms / gantry." },
+                    { ref: "9.3", text: "Fastener torque sequence documented and verified.", guide: "Check workstation visual sequence indicator." },
+                    { ref: "9.4", text: "Error-proofing fixture preventing part movement during torque process.", guide: "Inspect pneumatic locking clamps." },
+                    { ref: "9.5", text: "Screwdriver reverse feature disabled.", guide: "Verify reverse function lock out." },
+                    { ref: "9.6", text: "Equipment automatically locks part upon failure; unlocks only after suspect part is rejected and marked.", guide: "Test NOK torque lock/unlock workflow." },
+                    { ref: "9.7", text: "Equipment requires suspect part to be segregated and scrapped upon torque failure.", guide: "Inspect red box lock interlock." }
+                ]
+            },
+            {
+                code: "SECTION 10",
+                shortTitle: "10. HARNESS ASSEMBLY",
+                title: "SECTION 10. HARNESS ASSEMBLY PROCESS",
+                questions: [
+                    { ref: "10.1", text: "Push-click-pull-push method verified 100% with LED guidance / terminal insertion aid.", guide: "Inspect light-guided assembly board." },
+                    { ref: "10.2", text: "100% automated detection of cavity plug presence, position, and full seating.", guide: "Test cavity plug detection sensors." },
+                    { ref: "10.3", text: "Assembly boards designed to avoid wire twists, loops, tangles, and excessive tension.", guide: "Audit assembly board ergonomics and layout." },
+                    { ref: "10.4", text: "Un-taped wire branch areas free of slack loops or kinks.", guide: "Check branch routing guidelines." },
+                    { ref: "10.5", text: "Wire length optimization validated and confirmed prior to PPAP approval.", guide: "Check 1:1 drawing board overlay." },
+                    { ref: "10.6", text: "Assembly board contains harness P/N, revision, color codes, taping/covering specs, visual aids, clip/branch info, barcode.", guide: "Inspect board visual documentation." },
+                    { ref: "10.7", text: "Assembly boards clearly reflect latest released engineering changes approved by customer.", guide: "Check engineering revision tag on board." },
+                    { ref: "10.8", text: "Holding fixtures/forks move away during branch taping and restore to original position.", guide: "Inspect retracting board forks." },
+                    { ref: "10.9.1", text: "Navigation system detects wrong cavity insertion, missing terminal, lack of continuity or high resistance.", guide: "Test smart insertion board." },
+                    { ref: "10.9.2", text: "Spring-assisted locking system releases components when high stress is applied.", guide: "Check connector holder strain relief." },
+                    { ref: "10.10", text: "Avoidance of duplicate wire pairs with similar colors at same assembly station.", guide: "Review wire routing color separation." },
+                    { ref: "10.11", text: "100% automated verification preventing component mix-up and Poka-Yoke fixtures for all connectors/clips.", guide: "Test connector mechanical keying fixtures." },
+                    { ref: "10.12", text: "Spreading tool used for corrugated tube installation (manual slitting strictly prohibited).", guide: "Inspect tube application tools." },
+                    { ref: "10.13", text: "Wire strain relief features (spacers and stops on connector holders) implemented.", guide: "Check connector holder relief stops." },
+                    { ref: "10.14", text: "Taping process controlled to prevent tape end flagging or unraveling.", guide: "Verify tape overlap and end-press discipline." },
+                    { ref: "10.15", text: "Safe tape cutting tools utilized to prevent wire insulation damage or cut strands.", guide: "Inspect safety tape cutters." },
+                    { ref: "10.16", text: "Immediate segregation and quarantine of non-conforming items during assembly.", guide: "Inspect assembly red boxes." },
+                    { ref: "10.17", text: "Preventive maintenance performed on assembly boards and board tooling.", guide: "Check PM stickers on assembly boards." },
+                    { ref: "10.18", text: "Assembly boards designed without sharp edges to prevent wire and connector damage.", guide: "Inspect board edges and corner protection." },
+                    { ref: "10.19", text: "Tie guns calibrated, locked, color-coded, and clip excess cut flush/ergonomically.", guide: "Verify tie gun tension calibration tags." },
+                    { ref: "10.20", text: "Integrated vision test and automated height/insertion force monitoring for fuses and relays.", guide: "Test PDC fuse vision camera." },
+                    { ref: "10.21", text: "Expanded grommets: 3D stoppers, insert position Poka-Yoke, approved lubricants, terminal protection, retention force control.", guide: "Inspect grommet assembly station." },
+                    { ref: "10.22", text: "Uniform butyl/mastic distribution and automated pressure testing for grommets/seals.", guide: "Check mastic dispenser." },
+                    { ref: "10.23", text: "Channel/trough position assured; taping does not block bushing or locating holes.", guide: "Inspect channel assembly visual aids." }
+                ]
+            },
+            {
+                code: "SECTION 11",
+                shortTitle: "11. TESTING & EOL",
+                title: "SECTION 11. ELECTRICAL & DIMENSIONAL TESTING",
+                questions: [
+                    { ref: "11.1", text: "Dimensional boards with 3D orientation, 100% error-proofing holders, electropneumatic locks, and release upon pass label.", guide: "Inspect dimensional test board locks." },
+                    { ref: "11.2", text: "Dimensional measurements performed prior to electrical testing.", guide: "Verify process sequence." },
+                    { ref: "11.3.1", text: "EOL electrical test board with 100% defect detection, locking during test, spring pins, SPC tracking, and robust frame.", guide: "Verify test system lock during test execution." },
+                    { ref: "11.3.2", text: "End of line test board equipped with light indicators for successful component placement and insertion.", guide: "Check LED status on test module." },
+                    { ref: "11.3.3", text: "Mechanical/pneumatic locking keeps connectors seated; unlocks only upon 100% test pass.", guide: "Test pneumatic block on simulated electrical fault." },
+                    { ref: "11.3.4", text: "Test program automatically reinitiates test sequence after non-conforming condition is detected.", guide: "Verify test software error handler." },
+                    { ref: "11.3.5", text: "Improvement plan implemented when wiggle-jiggle / intermittent contact condition is present during test.", guide: "Check test module maintenance log." },
+                    { ref: "11.3.6", text: "Smallest components (fuses, relays, diodes) assembled first and fully seated on PDC boards.", guide: "Verify PDC load sequence." },
+                    { ref: "11.3.7", text: "Spring-assisted / step pins used, physical state verified, replacement tracked in database with SPC.", guide: "Check pin counter and replacement database." },
+                    { ref: "11.3.8", text: "Electrical test pins in place for cavities on all connectors on EOL board.", guide: "Verify 100% pin population." },
+                    { ref: "11.3.9", text: "Pin pushback test implemented where feasible; eyelet terminal bend angle controlled.", guide: "Test pin pushback test function." },
+                    { ref: "11.3.10", text: "Error-proofing holders in place to ensure bent eyelet terminals are within allowable angle range.", guide: "Inspect eyelet fixture." },
+                    { ref: "11.3.11", text: "Visual identification of critical and safety connectors on end of line test board.", guide: "Inspect color coding on test board." },
+                    { ref: "11.3.12", text: "EOL test board construction features robust frames and durable mounting plates (laminate/compressed wood).", guide: "Inspect board frame structure." },
+                    { ref: "11.4", text: "Functional testing for data cables (Ethernet, Coaxial, LVDS, A2B, CAN/LIN) covering continuity, Hipot, SWR, Impedance, Loss.", guide: "Review high-frequency test analyzer calibration." },
+                    { ref: "11.5.1", text: "Automated vision inspection on connectors/terminals after electrical test (spread/bent terminals, TPO, TNA, damaged housing).", guide: "Test EOL vision system." },
+                    { ref: "11.5.2", text: "Printed label tagged on harness indicating successful pass of vacuum, dimensional, electrical, and vision inspection.", guide: "Verify barcode printer interlock." }
+                ]
+            },
+            {
+                code: "SECTION 12",
+                shortTitle: "12. REWORK & REPAIR",
+                title: "SECTION 12. REWORK & REPAIR CONTROLS",
+                questions: [
+                    { ref: "12.1.1", text: "Repairs or reworks strictly prohibited on safety components.", guide: "Verify airbag/safety circuit zero-rework policy." },
+                    { ref: "12.1.2", text: "Non-conforming safety components scrapped; rework/replace processes incorporated in PFMEA, Control Plan, and WI.", guide: "Check PFMEA rework risk evaluation." },
+                    { ref: "12.1.3", text: "Rework and replace processes reviewed and approved by customer quality and engineering prior to PPAP.", guide: "Check customer approved rework agreement." },
+                    { ref: "12.2", text: "Clearly marked, segregated, and dedicated rework area (red station/cage) restricted to authorized trained personnel.", guide: "Inspect physical rework cage access control." },
+                    { ref: "12.3", text: "Rework operator training performed by rework type and connector; certification records maintained.", guide: "Check certified rework operator badges." },
+                    { ref: "12.4", text: "Automated rework system tracking serial, operator, inspector, tools, blocking previous tests, and re-testing 100%.", guide: "Verify MES rework tracking workflow." },
+                    { ref: "12.5.1", text: "100% inspection using optical magnification (microscope/camera); visual eye inspection prohibited.", guide: "Inspect rework station microscopes." },
+                    { ref: "12.5.2", text: "Rework photo archive electronically linked to harness serial number.", guide: "Verify rework digital photo database." },
+                    { ref: "12.5.3", text: "Segregation of duties: rework operator cannot inspect or validate the reworked component.", guide: "Check operator login restrictions." },
+                    { ref: "12.6", text: "Reintroduction of reworked/replaced parts back to original production station to verify process and gage compliance.", guide: "Verify re-test routing." },
+                    { ref: "12.7", text: "Customer-approved terminal extraction tools used and maintained.", guide: "Inspect extraction tool kit condition." },
+                    { ref: "12.8", text: "Rework strictly prohibited on critical circuits (Airbag, ADAS, Coaxial, ABS).", guide: "Verify MES lock on critical circuits." }
+                ]
+            },
+            {
+                code: "SECTION 13",
+                shortTitle: "13. HIGH VOLTAGE (HV)",
+                title: "SECTION 13. HIGH VOLTAGE (HV) HARNESS MANUFACTURING",
+                questions: [
+                    { ref: "13.1", text: "Mandatory SPC tracking throughout program life (ultrasonic/crimp pull force, ferrule dimensions, busbar torque/angle).", guide: "Review SPC charts for HV key characteristics." },
+                    { ref: "13.2", text: "High voltage cable stripping strictly automated.", guide: "Inspect HV automated stripping station." },
+                    { ref: "13.3", text: "Automated ferrule (shield crimp ring) crimping with 100% anomaly detection.", guide: "Check ferrule crimp force monitoring." },
+                    { ref: "13.4", text: "HV connector assembly automated or interlocked with electrical testing equipment.", guide: "Verify HV assembly poka-yoke locks." },
+                    { ref: "13.5", text: "100% visual inspection under minimum 5X magnification for all crimped/welded HV connections.", guide: "Inspect 5X magnification station." },
+                    { ref: "13.6", text: "ZERO un-captured / stray strands allowed (critical defect mode).", guide: "Audit HV visual inspection standards." },
+                    { ref: "13.7", text: "100% Hipot testing retained throughout the program life cycle.", guide: "Verify HV Hipot test parameters (e.g. 3000V DC)." }
+                ]
+            },
+            {
+                code: "SECTION 14",
+                shortTitle: "14. COAXIAL CABLES",
+                title: "SECTION 14. COAXIAL CABLE MANUFACTURING",
+                questions: [
+                    { ref: "14.1", text: "100% detection capability for coaxial crimp defects (damaged/missing strands, strand out of position, insulation under crimp, concentricity, etc.).", guide: "Verify coaxial crimp monitoring capabilities." },
+                    { ref: "14.2", text: "Automatic mutilation capability upon crimp failure detection.", guide: "Test coaxial wire mutilator." },
+                    { ref: "14.3", text: "Physical measurement and pull force testing on coaxial crimp parameters per lot and after downtime.", guide: "Check pull test logs." },
+                    { ref: "14.4", text: "Automated coaxial terminal insertion and assembly into housing.", guide: "Inspect coax insertion station." },
+                    { ref: "14.5", text: "100% vision inspection (concentricity, condition) and Hipot testing with 1-year photo archive.", guide: "Verify 1-year image archive." },
+                    { ref: "14.6", text: "X-Ray inspection for internal core conductor integrity.", guide: "Inspect X-Ray lab samples." },
+                    { ref: "14.7", text: "Supplier guarantees complete physical and electrical integrity during downstream operations (taping, clipping).", guide: "Review protection sleeves on board." }
+                ]
+            },
+            {
+                code: "SECTION 15",
+                shortTitle: "15. TRACEABILITY",
+                title: "SECTION 15. TRACEABILITY & PACKAGING CONTROLS",
+                questions: [
+                    { ref: "15.1", text: "Complete digital traceability (date/time, batch numbers, alerts, reworks, maintenance).", guide: "Audit MES genealogy query for sample serial." },
+                    { ref: "15.2", text: "Bundle-by-bundle traceability with mandatory scanning and FIFO error-proofing.", guide: "Test FIFO scan lock." },
+                    { ref: "15.3", text: "Unique serial number barcode tagged on final wiring harness.", guide: "Verify harness 2D DataMatrix label." },
+                    { ref: "15.4", text: "Automated digital blocking and quarantine system for suspect/non-conforming items.", guide: "Test MES quarantine lock." },
+                    { ref: "15.5", text: "100% barcode/DataMatrix readability verification prior to shipment.", guide: "Inspect shipping dock barcode verification scanner." },
+                    { ref: "15.6", text: "Proven resistance of barcode labels and print against industrial solvents.", guide: "Review label smudge resistance test logs." }
+                ]
+            },
+            {
+                code: "SECTION 16",
+                shortTitle: "16. SAFE LAUNCH PLAN",
+                title: "SECTION 16. SAFE LAUNCH PLAN & LESSONS LEARNED",
+                questions: [
+                    { ref: "16.1", text: "Mandatory implementation of Wiring Harness Safe Launch Plan.", guide: "Review SLP document and containment station." },
+                    { ref: "16.2", text: "Define duration and Exit Criteria for Safe Launch Plan based on customer specific requirements.", guide: "Verify SLP exit criteria approval." },
+                    { ref: "16.3", text: "Safe Launch Plan operational from PPAP onwards with dedicated, qualified inspectors.", guide: "Inspect SLP dedicated inspection area." },
+                    { ref: "16.4", text: "Enhanced inspection of key dimensions, component presence/orientation, TPA/CPA, hanking geometry.", guide: "Review SLP check sheets." },
+                    { ref: "16.5", text: "100% optical match between harness part number and shipping container label.", guide: "Test container scanning station." },
+                    { ref: "16.6", text: "Formal sharing of Lessons Learned with customer.", guide: "Check Lessons Learned database." }
+                ]
+            },
+            {
+                code: "SECTION 17",
+                shortTitle: "17. HANKING & BENDING",
+                title: "SECTION 17. HANKING & BEND RADIUS CONTROLS",
+                questions: [
+                    { ref: "17.1", text: "Bending prohibited in critical zones; strict compliance with special cable bend radius per customer specs.", guide: "Inspect hanking radius mandrels." },
+                    { ref: "17.2", text: "Dedicated hanking board installed on main assembly line starting from PPAP.", guide: "Check 1:1 hanking board fixture." },
+                    { ref: "17.3", text: "Bend radius fixtures and loop guides compliant with 2D engineering drawing.", guide: "Verify loop guides dimensions." },
+                    { ref: "17.4", text: "Error-proofing barcode scan at hanking station confirming all quality gates passed.", guide: "Test hanking station scan lock." }
+                ]
+            },
+            {
+                code: "SECTION 18",
+                shortTitle: "18. RESIDENT ENGINE",
+                title: "SECTION 18. CUSTOMER SUPPORT & RESIDENT ENGINEERING",
+                questions: [
+                    { ref: "18.1", text: "On-site technical product support at customer facility during pre-series and launch.", guide: "Verify resident engineer launch plan." },
+                    { ref: "18.2", text: "Dedicated Program Manager assigned per customer project at manufacturing facility.", guide: "Review project org chart." },
+                    { ref: "18.3", text: "Dedicated shift-based resident engineer at OEM assembly plant (containment, sorting, certified rework, reporting).", guide: "Review resident daily quality report." },
+                    { ref: "18.4", text: "Comprehensive documentation of audit findings, quality incidents, and lessons learned, formally shared with OEM for continuous improvement.", guide: "Review customer claim 8D reports database." }
+                ]
+            }
+        ];
+
+        // GLOBAL APPLICATION STATE
+        let currentTab = 'audit';
+        let auditScores = {};
+        let pdcaData = {};
+
+        // LOGIN AUTHENTICATION LOGIC
+        function handleLogin() {
+            const user = document.getElementById('login-username').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+            const errorMsg = document.getElementById('login-error-msg');
+
+            if (user === "AAzouzi" && pass === "Bonjour**1304") {
+                document.getElementById('login-modal').classList.add('hidden');
+                errorMsg.classList.add('hidden');
+                sessionStorage.setItem('cqi35_authenticated', 'true');
+            } else {
+                errorMsg.classList.remove('hidden');
+            }
+        }
+
+        function checkAuthStatus() {
+            if (sessionStorage.getItem('cqi35_authenticated') === 'true') {
+                const modal = document.getElementById('login-modal');
+                if (modal) modal.classList.add('hidden');
+            }
+        }
+
+        // INITIALIZATION
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthStatus();
+            initializeAuditState();
+            loadSavedDataLocally();
+            renderSidebarNav();
+            populatePrintSelectOptions();
+            renderAuditDataEntryAllSections();
+            calculateScores();
+            renderComplianceLevelVdaStyle();
+            renderPDCATable();
+        });
+
+        function initializeAuditState() {
+            cqi35Data.forEach(sec => {
+                sec.questions.forEach(q => {
+                    auditScores[q.ref] = {
+                        score: 10,
+                        finding: "Conforme aux exigences CQI-35 pour le point " + q.ref + ".",
+                        photos: []
+                    };
+                    pdcaData[q.ref] = {
+                        rootCause: "",
+                        correctiveAction: "",
+                        owner: "Ahmed Azouzi",
+                        targetDate: "2026-10-15"
+                    };
+                });
+            });
+        }
+
+        function loadSavedDataLocally() {
+            try {
+                const saved = localStorage.getItem('cqi35_audit_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.auditor) document.getElementById('auditor-name').value = parsed.auditor;
+                    if (parsed.date) document.getElementById('audit-date').value = parsed.date;
+                    if (parsed.scores) {
+                        Object.keys(parsed.scores).forEach(k => {
+                            if (auditScores[k]) auditScores[k] = parsed.scores[k];
+                        });
+                    }
+                    if (parsed.pdca) {
+                        Object.keys(parsed.pdca).forEach(k => {
+                            if (pdcaData[k]) pdcaData[k] = parsed.pdca[k];
+                        });
+                    }
+                }
+            } catch(e) {
+                console.error("Local storage restoration failed:", e);
+            }
+        }
+
+        // POPULATE PRINT SELECT OPTIONS
+        function populatePrintSelectOptions() {
+            const select = document.getElementById('print-section-select');
+            cqi35Data.forEach((sec, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = sec.shortTitle;
+                select.appendChild(opt);
+            });
+        }
+
+        // RENDER SIDEBAR NAVIGATION
+        function renderSidebarNav() {
+            const container = document.getElementById('sidebar-nav-list');
+            container.innerHTML = cqi35Data.map((sec, idx) => `
+                <a href="#sec-anchor-${idx}" onclick="scrollToSection('sec-anchor-${idx}')" class="flex items-center justify-between p-2 rounded-lg hover:bg-slate-100 text-slate-700 font-medium transition group">
+                    <span class="truncate">${sec.shortTitle}</span>
+                    <span class="bg-slate-200 group-hover:bg-emerald-100 group-hover:text-emerald-700 text-slate-600 font-bold text-[10px] px-1.5 py-0.5 rounded-full">${sec.questions.length}Q</span>
+                </a>
+            `).join('');
+        }
+
+        function scrollToSection(id) {
+            switchTab('audit');
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // RENDER ALL 18 SECTIONS
+        function renderAuditDataEntryAllSections() {
+            const container = document.getElementById('audit-all-sections-container');
+            container.innerHTML = cqi35Data.map((sec, idx) => `
+                <div id="sec-anchor-${idx}" class="card-section bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+                    <!-- Section Header -->
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div>
+                            <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider">${sec.code}</span>
+                            <h2 class="text-lg font-bold text-slate-900">${sec.title}</h2>
+                        </div>
+                        <div class="flex items-center space-x-2 no-print">
+                            <button onclick="setSectionScores(${idx}, 10)" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-[11px] font-semibold px-2.5 py-1 rounded-md transition">Set all to 10</button>
+                            <button onclick="setSectionScores(${idx}, 'N/A')" class="bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-300 text-[11px] font-semibold px-2.5 py-1 rounded-md transition">Set all N/A</button>
+                        </div>
+                    </div>
+
+                    <!-- Questions List -->
+                    <div class="space-y-6">
+                        ${sec.questions.map(q => renderQuestionCard(sec, q)).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // QUESTION CARD COMPONENT
+        function renderQuestionCard(sec, q) {
+            const currentScore = auditScores[q.ref].score;
+            const currentFinding = auditScores[q.ref].finding;
+            const currentPhotos = auditScores[q.ref].photos || (auditScores[q.ref].photo ? [auditScores[q.ref].photo] : []);
+            const options = ['N/A', 0, 2, 4, 6, 8, 10];
+            const showPhotoBar = [0, 2, 4, 6, 8, '0', '2', '4', '6', '8'].includes(currentScore) || [0, 2, 4, 6, 8].includes(parseInt(currentScore));
+
+            return `
+                <div class="border border-slate-200 rounded-lg p-4 bg-slate-50/50 space-y-3">
+                    <div class="font-bold text-slate-900 text-sm">
+                        <span class="text-emerald-700 mr-1">${q.ref} &mdash;</span> ${q.text}
+                    </div>
+
+                    <!-- Guidelines -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-white border border-slate-200 p-3 rounded-lg shadow-2xs">
+                        <div>
+                            <span class="font-bold text-slate-700 block mb-0.5">Minimum AIAG CQI-35 Requirement:</span>
+                            <span class="text-slate-600">Verify process compliance, documentation, operator training, and error-proofing devices.</span>
+                        </div>
+                        <div>
+                            <span class="font-bold text-slate-700 block mb-0.5">Audit Implementation Guidelines:</span>
+                            <span class="text-slate-600">${q.guide}</span>
+                        </div>
+                    </div>
+
+                    <!-- Rating Options -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                        <span class="text-xs font-bold text-slate-700">Process Evaluation Rating:</span>
+                        <div class="flex items-center space-x-3 text-xs bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-2xs">
+                            ${options.map(val => `
+                                <label class="inline-flex items-center space-x-1 cursor-pointer">
+                                    <input type="radio" name="score-${q.ref}" value="${val}" ${currentScore === val ? 'checked' : ''} onchange="updateQuestionScore('${q.ref}', '${val}')" class="text-emerald-600 focus:ring-emerald-500">
+                                    <span class="${val === 'N/A' ? 'text-red-600 font-bold' : val === 10 ? 'text-emerald-700 font-bold' : 'text-slate-700 font-medium'}">${val}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Photo Attachment Bar -->
+                    <div id="photo-bar-${q.ref.replace(/\./g, '_')}" class="${showPhotoBar ? '' : 'hidden'} bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2 no-print">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                                <i class="fa-solid fa-camera text-amber-600"></i> Photo evidence for proof – Max. 5 photos
+                                <span id="photo-count-${q.ref.replace(/\./g, '_')}" class="bg-amber-200 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full">${currentPhotos.length}/5</span>
+                            </span>
+                            <label id="photo-add-btn-${q.ref.replace(/\./g, '_')}" class="${currentPhotos.length >= 5 ? 'hidden' : ''} cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm flex items-center space-x-1.5 transition">
+                                <i class="fa-solid fa-camera"></i>
+                                <span>Take a photo 📷</span>
+                                <input type="file" accept="image/*" capture="environment" class="hidden" onchange="capturePhoto('${q.ref}', this)">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Findings Input & Attached Photos Case -->
+                    <div class="bg-white border border-slate-300 rounded-md p-3 space-y-3">
+                        <label class="block text-[11px] font-bold text-slate-700"><i class="fa-solid fa-pen mr-1"></i>Findings &amp; Audited Evidence:</label>
+                        <textarea onchange="updateQuestionFinding('${q.ref}', this.value)" rows="3" class="w-full text-xs p-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-emerald-500 outline-none bg-slate-50 transition">${currentFinding}</textarea>
+                        
+                        <!-- Attached Images Grid inside Findings -->
+                        <div id="photo-grid-${q.ref.replace(/\./g, '_')}" class="${currentPhotos.length > 0 ? '' : 'hidden'} border-t border-slate-200 pt-3">
+                            <span class="text-[11px] font-bold text-slate-600 block mb-2"><i class="fa-solid fa-paperclip mr-1"></i>Attached photos (${currentPhotos.length}) :</span>
+                            <div id="photo-list-${q.ref.replace(/\./g, '_')}" class="flex flex-wrap gap-4">
+                                ${currentPhotos.map((imgSrc, pIdx) => `
+                                    <div class="relative group border-2 border-slate-300 rounded-lg overflow-hidden bg-slate-100 shadow-md">
+                                        <img src="${imgSrc}" class="w-60 h-60 object-cover rounded-lg">
+                                        <button onclick="removePhotoAt('${q.ref}', ${pIdx})" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow transition no-print" title="Supprimer cette photo">
+                                            <i class="fa-solid fa-trash text-xs"></i>
+                                        </button>
+                                        <span class="absolute bottom-1 left-2 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded">Photo ${pIdx + 1}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function capturePhoto(ref, input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const dataUrl = e.target.result;
+                    if (!auditScores[ref]) auditScores[ref] = { photos: [] };
+                    if (!auditScores[ref].photos) {
+                        auditScores[ref].photos = auditScores[ref].photo ? [auditScores[ref].photo] : [];
+                    }
+                    if (auditScores[ref].photos.length < 5) {
+                        auditScores[ref].photos.push(dataUrl);
+                        saveDataLocally();
+                        refreshQuestionPhotosUI(ref);
+                    } else {
+                        alert("Limite atteinte : Vous pouvez ajouter un maximum de 5 photos par question.");
+                    }
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removePhotoAt(ref, idx) {
+            if (auditScores[ref] && auditScores[ref].photos) {
+                auditScores[ref].photos.splice(idx, 1);
+                saveDataLocally();
+                refreshQuestionPhotosUI(ref);
+            }
+        }
+
+        function refreshQuestionPhotosUI(ref) {
+            const safeRef = ref.replace(/\./g, '_');
+            const photos = auditScores[ref].photos || [];
+            
+            const countBadge = document.getElementById('photo-count-' + safeRef);
+            if (countBadge) countBadge.innerText = photos.length + "/5";
+
+            const addBtn = document.getElementById('photo-add-btn-' + safeRef);
+            if (addBtn) {
+                if (photos.length >= 5) {
+                    addBtn.classList.add('hidden');
+                } else {
+                    addBtn.classList.remove('hidden');
+                }
+            }
+
+            const grid = document.getElementById('photo-grid-' + safeRef);
+            const list = document.getElementById('photo-list-' + safeRef);
+
+            if (grid && list) {
+                if (photos.length > 0) {
+                    grid.classList.remove('hidden');
+                    list.innerHTML = photos.map((imgSrc, pIdx) => `
+                        <div class="relative group border-2 border-slate-300 rounded-lg overflow-hidden bg-slate-100 shadow-md">
+                            <img src="${imgSrc}" class="w-60 h-60 object-cover rounded-lg">
+                            <button onclick="removePhotoAt('${ref}', ${pIdx})" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow transition no-print" title="Supprimer cette photo">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                            <span class="absolute bottom-1 left-2 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded">Photo ${pIdx + 1}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    grid.classList.add('hidden');
+                    list.innerHTML = '';
+                }
+            }
+        }
+
+        function updateQuestionScore(ref, val) {
+            const numVal = (val === 'N/A') ? 'N/A' : parseInt(val);
+            auditScores[ref].score = numVal;
+            saveDataLocally();
+            calculateScores();
+            renderComplianceLevelVdaStyle();
+            renderPDCATable();
+
+            const safeRef = ref.replace(/\./g, '_');
+            const photoBar = document.getElementById('photo-bar-' + safeRef);
+            if (photoBar) {
+                if ([0, 2, 4, 6, 8, '0', '2', '4', '6', '8'].includes(numVal) || [0, 2, 4, 6, 8].includes(parseInt(numVal))) {
+                    photoBar.classList.remove('hidden');
+                } else {
+                    photoBar.classList.add('hidden');
+                }
+            }
+        }
+
+        function updateQuestionFinding(ref, text) {
+            auditScores[ref].finding = text;
+            saveDataLocally();
+            renderPDCATable();
+        }
+
+        function setSectionScores(secIdx, val) {
+            cqi35Data[secIdx].questions.forEach(q => {
+                auditScores[q.ref].score = (val === 'N/A') ? 'N/A' : parseInt(val);
+            });
+            saveDataLocally();
+            renderAuditDataEntryAllSections();
+            calculateScores();
+            renderComplianceLevelVdaStyle();
+            renderPDCATable();
+        }
+
+        function setAllScoresGlobal(val) {
+            cqi35Data.forEach(sec => {
+                sec.questions.forEach(q => {
+                    auditScores[q.ref].score = (val === 'N/A') ? 'N/A' : parseInt(val);
+                });
+            });
+            saveDataLocally();
+            renderAuditDataEntryAllSections();
+            calculateScores();
+            renderComplianceLevelVdaStyle();
+            renderPDCATable();
+        }
+
+        // CALCULATIONS
+        let globalEG = 100.0;
+        let sectionResults = [];
+
+        function calculateScores() {
+            let totalEarned = 0;
+            let totalMax = 0;
+            sectionResults = [];
+            let devCount = 0;
+
+            cqi35Data.forEach(sec => {
+                let secEarned = 0;
+                let secMax = 0;
+
+                sec.questions.forEach(q => {
+                    const sc = auditScores[q.ref].score;
+                    if (sc !== 'N/A') {
+                        secEarned += sc;
+                        secMax += 10;
+                        if (sc < 10) devCount++;
+                    }
+                });
+
+                const secEn = (secMax > 0) ? (secEarned / secMax) * 100 : 100.0;
+                sectionResults.push({
+                    code: sec.code,
+                    title: sec.title,
+                    earned: secEarned,
+                    max: secMax,
+                    en: secEn
+                });
+
+                totalEarned += secEarned;
+                totalMax += secMax;
+            });
+
+            globalEG = (totalMax > 0) ? (totalEarned / totalMax) * 100 : 100.0;
+
+            document.getElementById('header-global-score').innerText = globalEG.toFixed(1) + " %";
+            document.getElementById('compliance-overall-eg').innerText = globalEG.toFixed(1) + " %";
+            document.getElementById('deviation-count-badge').innerText = devCount;
+
+            const badge = document.getElementById('header-status-badge');
+            if (globalEG >= 90) {
+                badge.innerText = "LEVEL A";
+                badge.className = "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold px-2.5 py-0.5 rounded";
+            } else if (globalEG >= 80) {
+                badge.innerText = "LEVEL B";
+                badge.className = "bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-2.5 py-0.5 rounded";
+            } else {
+                badge.innerText = "LEVEL C";
+                badge.className = "bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-bold px-2.5 py-0.5 rounded";
+            }
+        }
+
+        // COMPLIANCE LEVEL TAB RENDER
+        function renderComplianceLevelVdaStyle() {
+            const container = document.getElementById('compliance-tables-container');
+            container.innerHTML = cqi35Data.map((sec, idx) => {
+                const res = sectionResults[idx];
+                const qList = sec.questions;
+
+                return `
+                    <div class="card-section">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <h3 class="text-sm font-bold text-blue-900">${sec.code}. ${sec.title.replace(/^SECTION \d+\.\s*/, '')}</h3>
+                            <span class="text-xs font-bold text-blue-900">E<sub>P${idx+1}</sub> ${res.en.toFixed(0)} %</span>
+                        </div>
+
+                        <div class="overflow-x-auto print:overflow-visible">
+                            <table class="vda-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 80px;">Reference</th>
+                                        ${qList.map(q => `<th>${q.ref}</th>`).join('')}
+                                        <th style="background-color: #1E293B; width: 45px;">Value</th>
+                                        <th style="background-color: #1E293B; width: 55px;">Max Val</th>
+                                        <th style="background-color: #1E293B; width: 75px;">Compliance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="font-bold text-slate-700">Note / Score</td>
+                                        ${qList.map(q => {
+                                            const sc = auditScores[q.ref].score;
+                                            return `<td class="${sc === 'N/A' ? 'ne-val' : 'font-medium'}">${sc === 'N/A' ? 'n.e.' : sc}</td>`;
+                                        }).join('')}
+                                        <td class="font-bold text-slate-900">${res.earned}</td>
+                                        <td class="font-bold text-slate-900">${res.max}</td>
+                                        <td class="compliance-box">E<sub>P${idx+1}</sub> ${res.en.toFixed(0)} %</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // PDCA TABLE RENDER
+        function renderPDCATable() {
+            const tbody = document.getElementById('pdca-table-body');
+            let rowsHtml = '';
+            let count = 0;
+
+            cqi35Data.forEach(sec => {
+                sec.questions.forEach(q => {
+                    const sc = auditScores[q.ref].score;
+                    if (sc !== 'N/A' && sc < 10) {
+                        count++;
+                        const pdca = pdcaData[q.ref];
+                        rowsHtml += `
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-2 border border-slate-200 font-bold text-red-700 text-center align-top">${q.ref}</td>
+                                <td class="p-2 border border-slate-200 text-slate-800 align-top">${q.text}</td>
+                                <td class="p-2 border border-slate-200 text-center font-bold text-red-600 align-top">${sc}</td>
+                                <td class="p-2 border border-slate-200 text-slate-600 align-top">${auditScores[q.ref].finding}</td>
+                                <td class="p-1 border border-slate-200 align-top">
+                                    <textarea rows="4" onchange="updatePDCAField('${q.ref}', 'rootCause', this.value)" placeholder="Analyse 5-Pourquoi / Cause racine..." class="w-full text-xs p-2 border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500 outline-none resize-y bg-white">${pdca.rootCause}</textarea>
+                                </td>
+                                <td class="p-1 border border-slate-200 align-top">
+                                    <textarea rows="4" onchange="updatePDCAField('${q.ref}', 'correctiveAction', this.value)" placeholder="Saisir l'action corrective PDCA / Fiche 8D..." class="w-full text-xs p-2 border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500 outline-none resize-y bg-white">${pdca.correctiveAction}</textarea>
+                                </td>
+                                <td class="p-1 border border-slate-200 align-top space-y-1.5">
+                                    <input type="text" value="${pdca.owner}" onchange="updatePDCAField('${q.ref}', 'owner', this.value)" placeholder="Resp." class="w-full text-xs p-1.5 border border-slate-300 rounded text-center focus:ring-1 focus:ring-emerald-500 outline-none bg-white">
+                                    <input type="date" value="${pdca.targetDate}" onchange="updatePDCAField('${q.ref}', 'targetDate', this.value)" class="w-full text-xs p-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500 outline-none bg-white">
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+            });
+
+            if (count === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500 font-semibold bg-emerald-50">Aucune non-conformité détectée (100% de conformité).</td></tr>`;
+            } else {
+                tbody.innerHTML = rowsHtml;
+            }
+        }
+
+        function updatePDCAField(ref, field, value) {
+            if (pdcaData[ref]) {
+                pdcaData[ref][field] = value;
+                saveDataLocally();
+            }
+        }
+
+        // TAB SWITCHING
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+            const btnAudit = document.getElementById('tab-btn-audit');
+            const btnComp = document.getElementById('tab-btn-compliance');
+            const btnDev = document.getElementById('tab-btn-deviations');
+            const sidebar = document.getElementById('audit-sidebar');
+            const selectSelect = document.getElementById('print-section-select');
+
+            [btnAudit, btnComp, btnDev].forEach(b => {
+                b.className = "flex items-center space-x-2 px-4 py-1.5 rounded-md text-xs font-semibold text-slate-300 hover:text-white transition";
+            });
+
+            if (tab === 'audit') {
+                btnAudit.className = "flex items-center space-x-2 px-4 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 text-white shadow transition";
+                sidebar.classList.remove('hidden');
+                selectSelect.disabled = false;
+                selectSelect.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else if (tab === 'compliance') {
+                btnComp.className = "flex items-center space-x-2 px-4 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 text-white shadow transition";
+                sidebar.classList.add('hidden');
+                selectSelect.disabled = true;
+                selectSelect.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                btnDev.className = "flex items-center space-x-2 px-4 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 text-white shadow transition";
+                sidebar.classList.add('hidden');
+                selectSelect.disabled = true;
+                selectSelect.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // EXPORT TO EXCEL WITH STYLES
+        function exportToExcel() {
+            const selectedVal = document.getElementById('print-section-select').value;
+            let sectionsToExport = cqi35Data;
+
+            if (selectedVal !== 'all') {
+                const secIdx = parseInt(selectedVal);
+                sectionsToExport = [cqi35Data[secIdx]];
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            const thinBorder = {
+                top: { style: "thin", color: { rgb: "CBD5E1" } },
+                bottom: { style: "thin", color: { rgb: "CBD5E1" } },
+                left: { style: "thin", color: { rgb: "CBD5E1" } },
+                right: { style: "thin", color: { rgb: "CBD5E1" } }
+            };
+
+            const headerStyle = {
+                font: { name: "Inter", sz: 10, bold: true, color: { rgb: "FFFFFF" } },
+                fill: { fgColor: { rgb: "1E3A8A" } },
+                alignment: { horizontal: "center", vertical: "center", wrapText: true },
+                border: thinBorder
+            };
+
+            const subHeaderStyle = {
+                font: { name: "Inter", sz: 10, bold: true, color: { rgb: "FFFFFF" } },
+                fill: { fgColor: { rgb: "0F172A" } },
+                alignment: { horizontal: "center", vertical: "center" },
+                border: thinBorder
+            };
+
+            const dataStyleCell = {
+                font: { name: "Inter", sz: 9 },
+                alignment: { horizontal: "center", vertical: "center" },
+                border: thinBorder
+            };
+
+            const textDataStyleCell = {
+                font: { name: "Inter", sz: 9 },
+                alignment: { horizontal: "left", vertical: "center", wrapText: true },
+                border: thinBorder
+            };
+
+            const neStyleCell = {
+                font: { name: "Inter", sz: 9, bold: true, color: { rgb: "B91C1C" } },
+                alignment: { horizontal: "center", vertical: "center" },
+                fill: { fgColor: { rgb: "FEF2F2" } },
+                border: thinBorder
+            };
+
+            const complianceBoxStyle = {
+                font: { name: "Inter", sz: 10, bold: true, color: { rgb: "FFFFFF" } },
+                fill: { fgColor: { rgb: "1E3A8A" } },
+                alignment: { horizontal: "center", vertical: "center" },
+                border: thinBorder
+            };
+
+            // 1. Compliance Sheet Generation
+            const compRows = [];
+            const merges = [];
+            let currentRowIdx = 0;
+
+            sectionsToExport.forEach((sec) => {
+                const globalIndex = cqi35Data.findIndex(s => s.code === sec.code);
+                const res = sectionResults[globalIndex];
+                const qList = sec.questions;
+
+                const titleCell = {
+                    v: `${sec.code}. ${sec.title.replace(/^SECTION \d+\.\s*/, '')} (Ep${globalIndex + 1} = ${res.en.toFixed(0)}%)`,
+                    s: { font: { name: "Inter", sz: 11, bold: true, color: { rgb: "1E3A8A" } }, alignment: { horizontal: "left" } }
+                };
+                compRows.push([titleCell]);
+                currentRowIdx++;
+
+                const rowHeader = [
+                    { v: "Reference", s: headerStyle }
+                ];
+                qList.forEach(q => rowHeader.push({ v: q.ref, s: headerStyle }));
+                rowHeader.push({ v: "Value", s: subHeaderStyle });
+                rowHeader.push({ v: "Max Val", s: subHeaderStyle });
+                rowHeader.push({ v: "Compliance", s: subHeaderStyle });
+                compRows.push(rowHeader);
+                currentRowIdx++;
+
+                const rowVal = [
+                    { v: "Note / Score", s: { font: { name: "Inter", sz: 9, bold: true }, alignment: { horizontal: "center", vertical: "center" }, border: thinBorder } }
+                ];
+                qList.forEach(q => {
+                    const sc = auditScores[q.ref].score;
+                    if (sc === 'N/A') {
+                        rowVal.push({ v: "n.e.", s: neStyleCell });
+                    } else {
+                        rowVal.push({ v: sc, s: dataStyleCell });
+                    }
+                });
+
+                rowVal.push({ v: res.earned, s: { font: { name: "Inter", sz: 10, bold: true }, alignment: { horizontal: "center", vertical: "center" }, border: thinBorder } });
+                rowVal.push({ v: res.max, s: { font: { name: "Inter", sz: 10, bold: true }, alignment: { horizontal: "center", vertical: "center" }, border: thinBorder } });
+                rowVal.push({ v: `Ep${globalIndex + 1} ${res.en.toFixed(0)}%`, s: complianceBoxStyle });
+
+                compRows.push(rowVal);
+                currentRowIdx++;
+
+                compRows.push([]);
+                currentRowIdx++;
+            });
+
+            const wsComp = XLSX.utils.aoa_to_sheet(compRows);
+            wsComp['!merges'] = merges;
+
+            const colWidths = [{ wch: 15 }];
+            let maxCols = 0;
+            sectionsToExport.forEach(s => { if (s.questions.length > maxCols) maxCols = s.questions.length; });
+            for (let i = 0; i < maxCols; i++) colWidths.push({ wch: 8 });
+            colWidths.push({ wch: 10 }, { wch: 10 }, { wch: 16 });
+            wsComp['!cols'] = colWidths;
+
+            XLSX.utils.book_append_sheet(wb, wsComp, "Compliance Summary");
+
+            // 2. Audit Details Sheet Generation
+            const auditRows = [
+                [
+                    { v: "Section", s: headerStyle },
+                    { v: "Reference", s: headerStyle },
+                    { v: "Requirement Description", s: headerStyle },
+                    { v: "Score", s: headerStyle },
+                    { v: "Finding / Audited Evidence", s: headerStyle }
+                ]
+            ];
+
+            sectionsToExport.forEach(sec => {
+                sec.questions.forEach(q => {
+                    const sc = auditScores[q.ref].score;
+                    auditRows.push([
+                        { v: sec.code, s: dataStyleCell },
+                        { v: q.ref, s: { font: { name: "Inter", sz: 9, bold: true }, alignment: { horizontal: "center", vertical: "center" }, border: thinBorder } },
+                        { v: q.text, s: textDataStyleCell },
+                        { v: sc === 'N/A' ? 'N/A' : sc, s: sc === 'N/A' ? neStyleCell : dataStyleCell },
+                        { v: auditScores[q.ref].finding, s: textDataStyleCell }
+                    ]);
+                });
+            });
+
+            const wsAudit = XLSX.utils.aoa_to_sheet(auditRows);
+            wsAudit['!cols'] = [
+                { wch: 15 },
+                { wch: 12 },
+                { wch: 55 },
+                { wch: 10 },
+                { wch: 45 }
+            ];
+
+            XLSX.utils.book_append_sheet(wb, wsAudit, "Audit Data Details");
+
+            const fileName = (selectedVal === 'all')
+                ? `CQI35_Full_Assessment_${document.getElementById('audit-date').value}.xlsx`
+                : `CQI35_${sectionsToExport[0].code.replace(/\s+/g, '_')}_${document.getElementById('audit-date').value}.xlsx`;
+
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // SAVE LOCALSTORAGE
+        function saveDataLocally() {
+            const state = {
+                auditor: document.getElementById('auditor-name').value,
+                date: document.getElementById('audit-date').value,
+                scores: auditScores,
+                pdca: pdcaData
+            };
+            localStorage.setItem('cqi35_audit_state', JSON.stringify(state));
+
+            const msg = document.getElementById('save-status-msg');
+            if (msg) {
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 2000);
+            }
+        }
+
+        // SAVE FILE TO DISK VIA BROWSER SYSTEM DIALOG
+        async function saveToFileSystem() {
+            saveDataLocally();
+            const stateData = {
+                auditor: document.getElementById('auditor-name').value,
+                date: document.getElementById('audit-date').value,
+                scores: auditScores,
+                pdca: pdcaData
+            };
+            const jsonString = JSON.stringify(stateData, null, 2);
+            const fileName = `CQI35_Assessment_${stateData.date}.json`;
+
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: fileName,
+                        types: [{
+                            description: 'Fichier d\'évaluation CQI-35 JSON',
+                            accept: { 'application/json': ['.json'] },
+                        }],
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(jsonString);
+                    await writable.close();
+                    alert('Fichier d\'évaluation sauvegardé avec succès sur le disque !');
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.error('Erreur lors de la sauvegarde:', err);
+                        fallbackDownload(jsonString, fileName);
+                    }
+                }
+            } else {
+                fallbackDownload(jsonString, fileName);
+            }
+        }
+
+        function fallbackDownload(content, filename) {
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // OPEN FILE FROM DISK
+        async function openFromFileSystem() {
+            if ('showOpenFilePicker' in window) {
+                try {
+                    const [handle] = await window.showOpenFilePicker({
+                        types: [{
+                            description: 'Fichier d\'évaluation CQI-35 JSON',
+                            accept: { 'application/json': ['.json'] },
+                        }],
+                        multiple: false
+                    });
+                    const file = await handle.getFile();
+                    const text = await file.text();
+                    applyLoadedJSON(text);
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.error('Erreur ouverture fichier:', err);
+                    }
+                }
+            } else {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = e => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = readerEvent => {
+                            applyLoadedJSON(readerEvent.target.result);
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                input.click();
+            }
+        }
+
+        function applyLoadedJSON(jsonText) {
+            try {
+                const parsed = JSON.parse(jsonText);
+                if (parsed.auditor) document.getElementById('auditor-name').value = parsed.auditor;
+                if (parsed.date) document.getElementById('audit-date').value = parsed.date;
+                if (parsed.scores) {
+                    Object.keys(parsed.scores).forEach(k => {
+                        if (auditScores[k]) auditScores[k] = parsed.scores[k];
+                    });
+                }
+                if (parsed.pdca) {
+                    Object.keys(parsed.pdca).forEach(k => {
+                        if (pdcaData[k]) pdcaData[k] = parsed.pdca[k];
+                    });
+                }
+                saveDataLocally();
+                renderAuditDataEntryAllSections();
+                calculateScores();
+                renderComplianceLevelVdaStyle();
+                renderPDCATable();
+                alert('Données d\'évaluation chargées avec succès !');
+            } catch (e) {
+                alert('Erreur lors de la lecture du fichier JSON : format invalide.');
+            }
+        }
+
+        // PRINT / PDF LOGIC
+        function printOrSavePDF() {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('print-active'));
+            document.querySelectorAll('.card-section').forEach(el => el.classList.remove('print-hidden'));
+
+            const activeTabEl = document.getElementById(`tab-${currentTab}`);
+            if (activeTabEl) activeTabEl.classList.add('print-active');
+
+            if (currentTab === 'audit') {
+                const selectedVal = document.getElementById('print-section-select').value;
+                if (selectedVal !== 'all') {
+                    const secIdx = parseInt(selectedVal);
+                    cqi35Data.forEach((_, idx) => {
+                        const secEl = document.getElementById(`sec-anchor-${idx}`);
+                        if (secEl && idx !== secIdx) {
+                            secEl.classList.add('print-hidden');
+                        }
+                    });
+                }
+            }
+
+            window.print();
+        }
+    </script>
+</body>
+</html>
